@@ -1,18 +1,25 @@
 
-const config = require("../config");
-
-async function pairCommand(sock, msg, args) {
+module.exports = async (sock, msg) => {
   const jid = msg.key.remoteJid;
 
-  if (!msg.key.fromMe) {
-    return sock.sendMessage(jid, {
-      text: "❌ Pair command එක Bot Owner විසින් පමණක් භාවිතා කළ හැකියි."
-    });
-  }
+  const text = `
+🔴 KESHAN MINI BOT
 
-  await sock.sendMessage(jid, {
-    text: "🔴 KESHAN MINI BOT\n\nPairing සඳහා Termux හි Bot එක ආරම්භ කර Phone Number එක ලබාදෙන්න."
-  });
-}
+☠️ PAIRING SYSTEM
 
-module.exports = pairCommand;
+Pairing Code ලබාගැනීමට:
+
+1. Termux Open කරන්න.
+2. Bot එක Start කරන්න.
+3. [2] PAIR CODE LOGIN තෝරන්න.
+4. WhatsApp Number එක ඇතුළත් කරන්න.
+
+📱 QR Login සඳහා [1] තෝරන්න.
+
+⚠️ Pairing Code එක රහසක් ලෙස තබාගන්න.
+
+© KESHAN MINI BOT
+`;
+
+  await sock.sendMessage(jid, { text });
+};
