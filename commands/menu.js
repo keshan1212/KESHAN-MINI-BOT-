@@ -3,30 +3,43 @@ module.exports = async (sock, msg) => {
   const jid = msg.key.remoteJid;
 
   const menu = `
-╔════════════════════╗
-    🔴 KESHAN MINI BOT
-╚════════════════════╝
+╔══════════════════════╗
+       🔴 KESHAN MINI BOT
+╚══════════════════════╝
 
-👑 COMMAND MENU
+       ☠️ COMMAND CENTER ☠️
 
-.pair
-.menu
+👑 GENERAL COMMANDS
+
 .ping
+.menu
+.status
 .jid
-.song
-.csong
+.pair
+
+🎵 MUSIC COMMANDS
+
+.song [name]
+.csong [YouTube URL]
 .autosong
 .stopcsong
-.antidelete
-.status
 
-━━━━━━━━━━━━━━━━━━━━
-🎵 AUTO SONG : READY
-🔴 BOT STATUS : ONLINE
-━━━━━━━━━━━━━━━━━━━━
+🛡️ SECURITY COMMANDS
 
-© KESHAN MINI BOT
+.antidelete on
+.antidelete off
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+🎧 AUTO SONG : READY
+🔴 THEME : DARK RED
+👑 DEVELOPER : KESHAN
+
+━━━━━━━━━━━━━━━━━━━━━━
+       KESHAN MINI BOT
 `;
 
-  await sock.sendMessage(jid, { text: menu });
+  await sock.sendMessage(jid, {
+    text: menu
+  });
 };
