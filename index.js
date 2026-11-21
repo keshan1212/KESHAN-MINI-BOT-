@@ -27,90 +27,86 @@ const rl = readline.createInterface({
   output: process.stdout
 });
 
-function ask(question) {
-  return new Promise(resolve => {
-    rl.question(question, resolve);
-  });
-}
+const ask = q => new Promise(resolve => rl.question(q, resolve));
+
+let starting = false;
 
 async function startBot() {
+  if (starting) return;
+  starting = true;
+
   const { state, saveCreds } =
     await useMultiFileAuthState("./session");
 
   const sock = makeWASocket({
     auth: state,
     logger: pino({ level: "silent" }),
-    browser: [config.BOT_NAME, "Chrome", "1.0.0"]
+    browser: [config.BOT_NAME, "Chrome", "1.0.0"],
+    printQRInTerminal: false
   });
 
   sock.ev.on("creds.update", saveCreds);
 
   if (!state.creds.registered) {
-    const number = (await ask(
-      "Enter WhatsApp number with country code: "
-    )).replace(/\D/g, "");
+    console.log(`
+🔴 KESHAN MINI BOT
 
-    if (!/^\d{8,15}$/.test(number)) {
-      console.log("Invalid phone number.");
-      rl.close();
-      return;
-    }
+[1] QR CODE LOGIN
+[2] PAIR CODE LOGIN
+`);
 
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      try {
-        console.log("Requesting Pairing Code...");
+    const choice = await ask("Select login method: ");
 
-        const code =
-          await sock.requestPairingCode(number);
+    if (choice.trim() === "2") {
+      const number = (await ask(
+        "Enter WhatsApp number with country code: "
+      )).replace(/\D/g, "");
 
-        console.log("\n================================");
-        console.log("KESHAN MINI BOT PAIRING CODE");
-        console.log("CODE:", code);
-        console.log("================================\n");
-
-        console.log(
-          "Enter this code in WhatsApp Linked Devices."
-        );
-
-        break;
-      } catch (error) {
-        console.log("Pairing attempt failed:", error.message);
-
-        if (attempt < 3) {
-          console.log("Wait 60 seconds before retrying.");
-          await new Promise(resolve =>
-            setTimeout(resolve, 60000)
-          );
-        } else {
-          console.log("Pairing failed. Restart Termux later.");
-        }
+      if (!/^\d{8,15}$/.test(number)) {
+        console.log("Invalid number.");
+        process.exit(1);
       }
-    }
 
-    rl.close();
+      try {
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        const code = await sock.requestPairingCode(number);
+        console.log("\n🔴 YOUR PAIRING CODE:", code);
+        console.log("Enter it in WhatsApp Linked Devices.");
+      } catch (err) {
+        console.error("Pairing failed:", err.message);
+      }
+    } else if (choice.trim() === "1") {
+      console.log("Waiting for QR code...");
+    } else {
+      console.log("Invalid selection.");
+      process.exit(1);
+    }
   }
 
   sock.ev.on("connection.update", async update => {
-    const { connection, lastDisconnect } = update;
+    const { connection, lastDisconnect, qr } = update;
+
+    if (qr) {
+      const qrcode = require("qrcode-terminal");
+      qrcode.generate(qr, { small: true });
+    }
 
     if (connection === "open") {
-      console.log("KESHAN MINI BOT CONNECTED!");
+      console.log("🔴 KESHAN MINI BOT CONNECTED!");
+      starting = false;
     }
 
     if (connection === "close") {
       const code =
         lastDisconnect?.error?.output?.statusCode;
 
+      starting = false;
+
       if (code !== DisconnectReason.loggedOut) {
         console.log("Reconnecting in 5 seconds...");
-
-        setTimeout(() => {
-          startBot().catch(console.error);
-        }, 5000);
+        setTimeout(() => startBot().catch(console.error), 5000);
       } else {
-        console.log(
-          "Logged out. Restart and pair again."
-        );
+        console.log("Logged out. Restart and pair again.");
       }
     }
   });
@@ -121,15 +117,12 @@ async function startBot() {
 
       const body =
         msg.message.conversation ||
-        msg.message.extendedTextMessage?.text ||
-        "";
+        msg.message.extendedTextMessage?.text || "";
 
       if (!body.startsWith(config.PREFIX)) continue;
 
-      const args = body
-        .slice(config.PREFIX.length)
-        .trim()
-        .split(/\s+/);
+      const args = body.slice(config.PREFIX.length)
+        .trim().split(/\s+/);
 
       const command = args.shift()?.toLowerCase();
 
@@ -139,9 +132,8 @@ async function startBot() {
         }
       } catch (error) {
         console.error(error);
-
         await sock.sendMessage(msg.key.remoteJid, {
-          text: "Command Error. Please try again."
+          text: "❌ Command Error."
         });
       }
     }
